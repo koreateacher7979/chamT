@@ -8,142 +8,235 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f3f4f6; }
-        .size-card { transition: transform 0.2s; }
-        .size-card:hover { transform: translateY(-2px); }
-        .loader { border-top-color: #3498db; animation: spinner 1.5s linear infinite; }
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; }
+        .size-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .loader { border-top-color: #3b82f6; animation: spinner 1s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .line-through-custom { text-decoration: line-through; color: #94a3b8; }
+        .checkbox-bounce { transform: scale(1); transition: transform 0.1s; }
+        .checkbox-bounce:active { transform: scale(1.2); }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4 md:p-6 lg:p-10">
 
-    <!-- Header Area -->
-    <header class="max-w-6xl mx-auto mb-8 text-center">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">👕 단체티 불출 현황</h1>
-        <p class="text-blue-600 font-medium">개발자: 참마음클럽 김병찬</p>
-        <div class="mt-4 inline-flex items-center bg-white px-4 py-2 rounded-full shadow-sm text-sm text-gray-500">
-            <i class="fas fa-sync-alt mr-2" id="sync-icon"></i> 
-            <span id="last-update">데이터를 불러오는 중...</span>
+    <!-- Top Navigation / Info -->
+    <header class="max-w-6xl mx-auto mb-10">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-gray-200 pb-6">
+            <div class="text-center md:text-left">
+                <h1 class="text-4xl font-black text-gray-900 tracking-tight mb-1">
+                    <span class="text-blue-600">👕</span> 단체티 불출 대시보드
+                </h1>
+                <p class="text-gray-500 font-medium text-lg">개발자: 참마음클럽 김병찬</p>
+            </div>
+            <div class="flex flex-col items-center md:items-end">
+                <div class="bg-white shadow-sm border border-gray-100 px-4 py-2 rounded-2xl flex items-center gap-3">
+                    <i class="fas fa-sync-alt text-blue-500" id="sync-icon"></i>
+                    <span id="last-update" class="text-sm font-mono text-gray-400 font-bold">데이터 대기 중...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 실시간 통합 통계 섹션 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-5">
+                <div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-600 text-2xl">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-400 font-bold uppercase tracking-wider">전체 대상자</p>
+                    <p id="stat-total" class="text-3xl font-black text-gray-800">0</p>
+                </div>
+            </div>
+            <div class="bg-blue-600 p-6 rounded-3xl shadow-lg shadow-blue-100 flex items-center gap-5 text-white">
+                <div class="w-14 h-14 bg-blue-500/50 rounded-2xl flex items-center justify-center text-white text-2xl">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-blue-100 font-bold uppercase tracking-wider">수령 완료</p>
+                    <p id="stat-received" class="text-3xl font-black">0</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-5">
+                <div class="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600 text-2xl">
+                    <i class="fas fa-box-open"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-400 font-bold uppercase tracking-wider">남은 티셔츠</p>
+                    <p id="stat-remaining" class="text-3xl font-black text-orange-600">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 진행률 바 -->
+        <div class="mt-8 bg-gray-200 h-4 rounded-full overflow-hidden shadow-inner">
+            <div id="progress-bar" class="bg-blue-600 h-full transition-all duration-700 ease-out" style="width: 0%"></div>
         </div>
     </header>
 
-    <!-- Loading State -->
-    <div id="loading" class="flex flex-col items-center justify-center py-20">
-        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
-        <p class="text-gray-500">스프레드시트에서 명단을 가져오고 있습니다...</p>
+    <!-- 로딩 인디케이터 -->
+    <div id="loading" class="flex flex-col items-center justify-center py-24">
+        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-16 w-16 mb-4"></div>
+        <p class="text-gray-400 font-medium animate-pulse">최신 데이터를 동기화하고 있습니다...</p>
     </div>
 
-    <!-- Dashboard Content -->
-    <main id="app" class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
-        <!-- 사이즈별 카드가 여기에 동적으로 생성됩니다 -->
+    <!-- 대시보드 리스트 -->
+    <main id="app" class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 hidden">
+        <!-- 사이즈별 카드가 생성되는 곳 -->
     </main>
 
-    <!-- Modal for feedback -->
-    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none">
-        데이터가 동기화되었습니다.
+    <!-- 알림 토스트 -->
+    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900/90 backdrop-blur-md text-white px-8 py-4 rounded-2xl shadow-2xl opacity-0 transition-all duration-300 pointer-events-none z-50 flex items-center gap-3 font-medium">
+        <i class="fas fa-info-circle text-blue-400"></i>
+        <span id="toast-msg">데이터가 동기화되었습니다.</span>
     </div>
 
     <script>
-        /**
-         * ⚠️ 중요: 아래 URL에 본인의 '구글 앱 스크립트 웹 앱 URL'을 입력하세요.
-         */
+        // 구글 앱 스크립트 배포 URL
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCVuxbLRyfmqXp6WxIMdR-L1drSvGf16D_CFUfdHBhW6nXUQo3mSBK95CgcA7tImo/exec'; 
 
         let inventoryData = [];
 
-        // 데이터 가져오기
+        // 데이터 로드
         async function fetchData() {
             try {
-                document.getElementById('sync-icon').classList.add('fa-spin');
+                const icon = document.getElementById('sync-icon');
+                icon.classList.add('fa-spin');
+                
                 const response = await fetch(SCRIPT_URL);
                 const data = await response.json();
+                
                 inventoryData = data;
                 renderDashboard();
                 updateTimestamp();
+                
+                icon.classList.remove('fa-spin');
             } catch (error) {
-                console.error('Error fetching data:', error);
-                // 테스트용 더미 데이터 (URL 설정 전 확인용)
-                if (SCRIPT_URL.includes('YOUR_')) {
-                    showToast("⚠️ 스크립트 URL을 설정해주세요. (테스트 데이터 표시)");
-                    inventoryData = [
-                        {row: 2, name: "김병찬", size: "남자 105", received: true},
-                        {row: 3, name: "홍길동", size: "남자 105", received: false},
-                        {row: 4, name: "이수중", size: "남자 100", received: false}
-                    ];
-                    renderDashboard();
-                }
+                console.error('Fetch error:', error);
+                showToast("⚠️ 데이터를 가져오는데 실패했습니다.", "error");
             } finally {
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('app').classList.remove('hidden');
-                document.getElementById('sync-icon').classList.remove('fa-spin');
             }
         }
 
-        // 수령 여부 업데이트
-        async function toggleReceived(row, currentState, checkbox) {
-            const newState = !currentState;
-            checkbox.disabled = true; // 중복 클릭 방지
+        // 수령 여부 업데이트 (즉시 동기화 로직)
+        async function toggleReceived(row, checkbox, nameElementId) {
+            const isChecked = checkbox.checked;
+            const itemIndex = inventoryData.findIndex(d => d.row === row);
+            const originalState = inventoryData[itemIndex].received;
+            const userName = inventoryData[itemIndex].name;
+            const nameEl = document.getElementById(nameElementId);
+
+            // [핵심] 즉시 UI 반영 (Optimistic Update)
+            inventoryData[itemIndex].received = isChecked;
+            if (isChecked) {
+                nameEl.classList.add('line-through-custom');
+            } else {
+                nameEl.classList.remove('line-through-custom');
+            }
+            
+            updateStatsUI(); // 상단 카운트 즉시 갱신
+            updateCardHeader(inventoryData[itemIndex].size); // 카드 뱃지 즉시 갱신
 
             try {
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ row, received: newState })
+                    body: JSON.stringify({ row, received: isChecked })
                 });
                 
                 if (response.ok) {
-                    showToast(`${inventoryData.find(d => d.row === row).name}님 수령 완료!`);
-                    // 로컬 데이터 업데이트
-                    const item = inventoryData.find(d => d.row === row);
-                    if (item) item.received = newState;
+                    showToast(`${userName}님 ${isChecked ? '수령 처리' : '취소'} 완료`);
+                } else {
+                    throw new Error("Sync failed");
                 }
             } catch (error) {
                 console.error('Update failed:', error);
-                showToast("❌ 동기화 실패. 다시 시도해주세요.");
-                checkbox.checked = currentState; // 롤백
-            } finally {
-                checkbox.disabled = false;
+                showToast("❌ 서버 동기화 실패. 다시 시도해주세요.", "error");
+                
+                // 에러 발생 시 롤백
+                inventoryData[itemIndex].received = originalState;
+                checkbox.checked = originalState;
+                if (originalState) nameEl.classList.add('line-through-custom');
+                else nameEl.classList.remove('line-through-custom');
+                updateStatsUI();
+                updateCardHeader(inventoryData[itemIndex].size);
             }
         }
 
-        // 대시보드 렌더링
+        // 전체 통계 및 진행률 바 업데이트
+        function updateStatsUI() {
+            const total = inventoryData.length;
+            const received = inventoryData.filter(m => m.received).length;
+            const remaining = total - received;
+            const percent = total > 0 ? (received / total) * 100 : 0;
+
+            document.getElementById('stat-total').innerText = `${total.toLocaleString()}명`;
+            document.getElementById('stat-received').innerText = `${received.toLocaleString()}명`;
+            document.getElementById('stat-remaining').innerText = `${remaining.toLocaleString()}명`;
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+        }
+
+        // 특정 카드 헤더의 뱃지 업데이트
+        function updateCardHeader(size) {
+            const members = inventoryData.filter(m => m.size === size);
+            const receivedCount = members.filter(m => m.received).length;
+            const badgeId = `badge-${size.replace(/\s+/g, '-')}`;
+            const badge = document.getElementById(badgeId);
+            if (badge) {
+                badge.innerText = `${receivedCount} / ${members.length}`;
+                if (receivedCount === members.length) {
+                    badge.classList.replace('bg-blue-600', 'bg-green-600');
+                } else {
+                    badge.classList.replace('bg-green-600', 'bg-blue-600');
+                }
+            }
+        }
+
+        // 대시보드 전체 렌더링
         function renderDashboard() {
+            updateStatsUI();
             const container = document.getElementById('app');
             container.innerHTML = '';
 
-            // 사이즈별로 그룹화
             const groups = inventoryData.reduce((acc, curr) => {
                 if (!acc[curr.size]) acc[curr.size] = [];
                 acc[curr.size].push(curr);
                 return acc;
             }, {});
 
-            // 사이즈 가나다순 정렬
             const sortedSizes = Object.keys(groups).sort();
 
             sortedSizes.forEach(size => {
                 const members = groups[size];
                 const receivedCount = members.filter(m => m.received).length;
+                const sizeId = size.replace(/\s+/g, '-');
+                const isAllReceived = receivedCount === members.length;
                 
                 const card = document.createElement('div');
-                card.className = "bg-white rounded-xl shadow-md overflow-hidden size-card border border-gray-100";
+                card.className = "bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden size-card flex flex-col";
                 
                 card.innerHTML = `
-                    <div class="bg-gray-800 p-4 flex justify-between items-center text-white">
-                        <h2 class="text-lg font-bold">${size}</h2>
-                        <span class="text-sm bg-blue-600 px-2 py-1 rounded">${receivedCount} / ${members.length}</span>
+                    <div class="bg-gray-900 p-5 flex justify-between items-center text-white">
+                        <h2 class="text-xl font-bold tracking-tight">${size}</h2>
+                        <span id="badge-${sizeId}" class="text-sm font-mono font-bold px-3 py-1 rounded-full ${isAllReceived ? 'bg-green-600' : 'bg-blue-600'} transition-colors duration-500">
+                            ${receivedCount} / ${members.length}
+                        </span>
                     </div>
-                    <div class="p-2 max-h-80 overflow-y-auto">
-                        <ul class="divide-y divide-gray-100">
-                            ${members.map(m => `
-                                <li class="flex items-center justify-between p-3 hover:bg-blue-50 transition-colors rounded-lg group">
-                                    <span class="font-medium text-gray-700">${m.name}</span>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" class="w-6 h-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition duration-150 ease-in-out" 
-                                            ${m.received ? 'checked' : ''} 
-                                            onchange="toggleReceived(${m.row}, ${m.received}, this)">
-                                    </label>
+                    <div class="p-3 max-h-[450px] overflow-y-auto">
+                        <ul class="space-y-1">
+                            ${members.map((m, idx) => {
+                                const elId = `name-${sizeId}-${idx}`;
+                                return `
+                                <li class="flex items-center justify-between p-4 hover:bg-gray-50 rounded-2xl transition-all group">
+                                    <span id="${elId}" class="font-bold text-gray-700 ${m.received ? 'line-through-custom' : ''}">
+                                        ${m.name}
+                                    </span>
+                                    <input type="checkbox" 
+                                        class="checkbox-bounce w-7 h-7 rounded-xl border-2 border-gray-200 text-blue-600 focus:ring-0 cursor-pointer transition-all" 
+                                        ${m.received ? 'checked' : ''} 
+                                        onchange="toggleReceived(${m.row}, this, '${elId}')">
                                 </li>
-                            `).join('')}
+                            `}).join('')}
                         </ul>
                     </div>
                 `;
@@ -153,17 +246,27 @@
 
         function updateTimestamp() {
             const now = new Date();
-            document.getElementById('last-update').innerText = `최근 동기화: ${now.toLocaleTimeString()}`;
+            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                          now.getMinutes().toString().padStart(2, '0') + ':' + 
+                          now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('last-update').innerText = `최근 동기화: ${timeStr}`;
         }
 
-        function showToast(msg) {
+        function showToast(msg, type = "success") {
             const toast = document.getElementById('toast');
-            toast.innerText = msg;
+            const toastMsg = document.getElementById('toast-msg');
+            toastMsg.innerText = msg;
+            
             toast.style.opacity = '1';
-            setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+            toast.style.transform = 'translate(-50%, -20px)';
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, 0)';
+            }, 2500);
         }
 
-        // 초기 실행 및 30초마다 자동 갱신
+        // 초기 실행 및 30초 주기 자동 갱신
         window.onload = () => {
             fetchData();
             setInterval(fetchData, 30000); 
