@@ -3,274 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>단체티 불출 현황 대시보드</title>
+    <title>참마음클럽 티셔츠 수령 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; }
-        .size-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .loader { border-top-color: #3b82f6; animation: spinner 1s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .line-through-custom { text-decoration: line-through; color: #94a3b8; }
-        .checkbox-bounce { transform: scale(1); transition: transform 0.1s; }
-        .checkbox-bounce:active { transform: scale(1.2); }
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
+        .size-card { transition: transform 0.2s; }
+        .size-card:hover { transform: translateY(-2px); }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="p-4 md:p-6 lg:p-10">
+<body>
+    <div id="root"></div>
 
-    <!-- Top Navigation / Info -->
-    <header class="max-w-6xl mx-auto mb-10">
-        <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-gray-200 pb-6">
-            <div class="text-center md:text-left">
-                <h1 class="text-4xl font-black text-gray-900 tracking-tight mb-1">
-                    <span class="text-blue-600">👕</span> 단체티 불출 대시보드
-                </h1>
-                <p class="text-gray-500 font-medium text-lg">개발자: 참마음클럽 김병찬</p>
-            </div>
-            <div class="flex flex-col items-center md:items-end">
-                <div class="bg-white shadow-sm border border-gray-100 px-4 py-2 rounded-2xl flex items-center gap-3">
-                    <i class="fas fa-sync-alt text-blue-500" id="sync-icon"></i>
-                    <span id="last-update" class="text-sm font-mono text-gray-400 font-bold">데이터 대기 중...</span>
-                </div>
-            </div>
-        </div>
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
 
-        <!-- 실시간 통합 통계 섹션 -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-5">
-                <div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-600 text-2xl">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-400 font-bold uppercase tracking-wider">전체 대상자</p>
-                    <p id="stat-total" class="text-3xl font-black text-gray-800">0</p>
-                </div>
-            </div>
-            <div class="bg-blue-600 p-6 rounded-3xl shadow-lg shadow-blue-100 flex items-center gap-5 text-white">
-                <div class="w-14 h-14 bg-blue-500/50 rounded-2xl flex items-center justify-center text-white text-2xl">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-blue-100 font-bold uppercase tracking-wider">수령 완료</p>
-                    <p id="stat-received" class="text-3xl font-black">0</p>
-                </div>
-            </div>
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-5">
-                <div class="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600 text-2xl">
-                    <i class="fas fa-box-open"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-400 font-bold uppercase tracking-wider">남은 티셔츠</p>
-                    <p id="stat-remaining" class="text-3xl font-black text-orange-600">0</p>
-                </div>
-            </div>
-        </div>
+        // 중요: 여기에 구글 앱스 스크립트 배포 URL을 입력하세요.
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIq2DRHCjhQBPpufz2WH565wNtE7zv-2lb8hMsCDXHslad50m1IVsG3EE_yCmrg7zo/exec"; 
 
-        <!-- 진행률 바 -->
-        <div class="mt-8 bg-gray-200 h-4 rounded-full overflow-hidden shadow-inner">
-            <div id="progress-bar" class="bg-blue-600 h-full transition-all duration-700 ease-out" style="width: 0%"></div>
-        </div>
-    </header>
+        function App() {
+            const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [searchTerm, setSearchTerm] = useState("");
+            const [isSyncing, setIsSyncing] = useState(false);
 
-    <!-- 로딩 인디케이터 -->
-    <div id="loading" class="flex flex-col items-center justify-center py-24">
-        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-16 w-16 mb-4"></div>
-        <p class="text-gray-400 font-medium animate-pulse">최신 데이터를 동기화하고 있습니다...</p>
-    </div>
-
-    <!-- 대시보드 리스트 -->
-    <main id="app" class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 hidden">
-        <!-- 사이즈별 카드가 생성되는 곳 -->
-    </main>
-
-    <!-- 알림 토스트 -->
-    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900/90 backdrop-blur-md text-white px-8 py-4 rounded-2xl shadow-2xl opacity-0 transition-all duration-300 pointer-events-none z-50 flex items-center gap-3 font-medium">
-        <i class="fas fa-info-circle text-blue-400"></i>
-        <span id="toast-msg">데이터가 동기화되었습니다.</span>
-    </div>
-
-    <script>
-        // 구글 앱 스크립트 배포 URL
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCVuxbLRyfmqXp6WxIMdR-L1drSvGf16D_CFUfdHBhW6nXUQo3mSBK95CgcA7tImo/exec'; 
-
-        let inventoryData = [];
-
-        // 데이터 로드
-        async function fetchData() {
-            try {
-                const icon = document.getElementById('sync-icon');
-                icon.classList.add('fa-spin');
-                
-                const response = await fetch(SCRIPT_URL);
-                const data = await response.json();
-                
-                inventoryData = data;
-                renderDashboard();
-                updateTimestamp();
-                
-                icon.classList.remove('fa-spin');
-            } catch (error) {
-                console.error('Fetch error:', error);
-                showToast("⚠️ 데이터를 가져오는데 실패했습니다.", "error");
-            } finally {
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('app').classList.remove('hidden');
-            }
-        }
-
-        // 수령 여부 업데이트 (즉시 동기화 로직)
-        async function toggleReceived(row, checkbox, nameElementId) {
-            const isChecked = checkbox.checked;
-            const itemIndex = inventoryData.findIndex(d => d.row === row);
-            const originalState = inventoryData[itemIndex].received;
-            const userName = inventoryData[itemIndex].name;
-            const nameEl = document.getElementById(nameElementId);
-
-            // [핵심] 즉시 UI 반영 (Optimistic Update)
-            inventoryData[itemIndex].received = isChecked;
-            if (isChecked) {
-                nameEl.classList.add('line-through-custom');
-            } else {
-                nameEl.classList.remove('line-through-custom');
-            }
-            
-            updateStatsUI(); // 상단 카운트 즉시 갱신
-            updateCardHeader(inventoryData[itemIndex].size); // 카드 뱃지 즉시 갱신
-
-            try {
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ row, received: isChecked })
-                });
-                
-                if (response.ok) {
-                    showToast(`${userName}님 ${isChecked ? '수령 처리' : '취소'} 완료`);
-                } else {
-                    throw new Error("Sync failed");
+            const fetchData = async () => {
+                try {
+                    setLoading(true);
+                    const response = await fetch(SCRIPT_URL);
+                    const result = await response.json();
+                    setData(result);
+                    setError(null);
+                } catch (err) {
+                    setError("데이터를 불러오는데 실패했습니다. URL 설정을 확인해주세요.");
+                    console.error(err);
+                } finally {
+                    setLoading(false);
                 }
-            } catch (error) {
-                console.error('Update failed:', error);
-                showToast("❌ 서버 동기화 실패. 다시 시도해주세요.", "error");
+            };
+
+            useEffect(() => {
+                fetchData();
+                // 30초마다 자동 새로고침 (실시간 동기화 느낌 유지)
+                const interval = setInterval(fetchData, 30000);
+                return () => clearInterval(interval);
+            }, []);
+
+            const handleToggle = async (rowIndex, currentStatus) => {
+                const newStatus = !currentStatus;
                 
-                // 에러 발생 시 롤백
-                inventoryData[itemIndex].received = originalState;
-                checkbox.checked = originalState;
-                if (originalState) nameEl.classList.add('line-through-custom');
-                else nameEl.classList.remove('line-through-custom');
-                updateStatsUI();
-                updateCardHeader(inventoryData[itemIndex].size);
-            }
-        }
+                // UI 즉시 업데이트 (Optimistic Update)
+                const updatedData = data.map(item => 
+                    item.rowIndex === rowIndex ? { ...item, "수령여부": newStatus } : item
+                );
+                setData(updatedData);
+                setIsSyncing(true);
 
-        // 전체 통계 및 진행률 바 업데이트
-        function updateStatsUI() {
-            const total = inventoryData.length;
-            const received = inventoryData.filter(m => m.received).length;
-            const remaining = total - received;
-            const percent = total > 0 ? (received / total) * 100 : 0;
-
-            document.getElementById('stat-total').innerText = `${total.toLocaleString()}명`;
-            document.getElementById('stat-received').innerText = `${received.toLocaleString()}명`;
-            document.getElementById('stat-remaining').innerText = `${remaining.toLocaleString()}명`;
-            document.getElementById('progress-bar').style.width = `${percent}%`;
-        }
-
-        // 특정 카드 헤더의 뱃지 업데이트
-        function updateCardHeader(size) {
-            const members = inventoryData.filter(m => m.size === size);
-            const receivedCount = members.filter(m => m.received).length;
-            const badgeId = `badge-${size.replace(/\s+/g, '-')}`;
-            const badge = document.getElementById(badgeId);
-            if (badge) {
-                badge.innerText = `${receivedCount} / ${members.length}`;
-                if (receivedCount === members.length) {
-                    badge.classList.replace('bg-blue-600', 'bg-green-600');
-                } else {
-                    badge.classList.replace('bg-green-600', 'bg-blue-600');
+                try {
+                    await fetch(SCRIPT_URL, {
+                        method: "POST",
+                        mode: "no-cors", // Apps Script CORS 정책 대응
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ rowIndex, received: newStatus })
+                    });
+                    // no-cors 모드에서는 응답을 읽을 수 없으므로 성공으로 간주하거나 
+                    // 일정 시간 후 다시 fetch하여 확인합니다.
+                    setTimeout(fetchData, 1000);
+                } catch (err) {
+                    console.error("업데이트 실패:", err);
+                    alert("동기화 중 오류가 발생했습니다.");
+                    fetchData(); // 원복
+                } finally {
+                    setIsSyncing(false);
                 }
-            }
-        }
+            };
 
-        // 대시보드 전체 렌더링
-        function renderDashboard() {
-            updateStatsUI();
-            const container = document.getElementById('app');
-            container.innerHTML = '';
+            const stats = useMemo(() => {
+                const total = data.length;
+                const received = data.filter(item => item["수령여부"] === true || item["수령여부"] === "TRUE" || item["수령여부"] === "checked").length;
+                return { total, received, remaining: total - received };
+            }, [data]);
 
-            const groups = inventoryData.reduce((acc, curr) => {
-                if (!acc[curr.size]) acc[curr.size] = [];
-                acc[curr.size].push(curr);
-                return acc;
-            }, {});
-
-            const sortedSizes = Object.keys(groups).sort();
-
-            sortedSizes.forEach(size => {
-                const members = groups[size];
-                const receivedCount = members.filter(m => m.received).length;
-                const sizeId = size.replace(/\s+/g, '-');
-                const isAllReceived = receivedCount === members.length;
+            const groupedData = useMemo(() => {
+                const filtered = data.filter(item => 
+                    item["이름"]?.toString().toLowerCase().includes(searchTerm.toLowerCase())
+                );
                 
-                const card = document.createElement('div');
-                card.className = "bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden size-card flex flex-col";
-                
-                card.innerHTML = `
-                    <div class="bg-gray-900 p-5 flex justify-between items-center text-white">
-                        <h2 class="text-xl font-bold tracking-tight">${size}</h2>
-                        <span id="badge-${sizeId}" class="text-sm font-mono font-bold px-3 py-1 rounded-full ${isAllReceived ? 'bg-green-600' : 'bg-blue-600'} transition-colors duration-500">
-                            ${receivedCount} / ${members.length}
-                        </span>
+                return filtered.reduce((acc, item) => {
+                    const size = item["사이즈"] || "기타";
+                    if (!acc[size]) acc[size] = [];
+                    acc[size].push(item);
+                    return acc;
+                }, {});
+            }, [data, searchTerm]);
+
+            if (loading && data.length === 0) {
+                return (
+                    <div className="flex flex-col items-center justify-center min-h-screen">
+                        <div className="loading-spinner mb-4"></div>
+                        <p className="text-gray-600">데이터를 동기화 중입니다...</p>
                     </div>
-                    <div class="p-3 max-h-[450px] overflow-y-auto">
-                        <ul class="space-y-1">
-                            ${members.map((m, idx) => {
-                                const elId = `name-${sizeId}-${idx}`;
-                                return `
-                                <li class="flex items-center justify-between p-4 hover:bg-gray-50 rounded-2xl transition-all group">
-                                    <span id="${elId}" class="font-bold text-gray-700 ${m.received ? 'line-through-custom' : ''}">
-                                        ${m.name}
+                );
+            }
+
+            return (
+                <div className="max-w-4xl mx-auto px-4 py-8">
+                    {/* Header */}
+                    <header className="mb-8 text-center">
+                        <div className="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold mb-2">
+                            2026 참마음 단체 티셔츠
+                        </div>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-2">수령 확인 대시보드</h1>
+                        <p className="text-gray-500 text-sm">개발자: 참마음클럽 김병찬</p>
+                    </header>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-4 mb-8">
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-center">
+                            <p className="text-xs text-gray-500 font-medium uppercase mb-1">총 수량</p>
+                            <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
+                        </div>
+                        <div className="bg-blue-50 p-4 rounded-2xl shadow-sm border border-blue-100 text-center">
+                            <p className="text-xs text-blue-600 font-medium uppercase mb-1">수령 완료</p>
+                            <p className="text-2xl font-bold text-blue-700">{stats.received}</p>
+                        </div>
+                        <div className="bg-orange-50 p-4 rounded-2xl shadow-sm border border-orange-100 text-center">
+                            <p className="text-xs text-orange-600 font-medium uppercase mb-1">미수령</p>
+                            <p className="text-2xl font-bold text-orange-700">{stats.remaining}</p>
+                        </div>
+                    </div>
+
+                    {/* Search & Status */}
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="relative flex-1">
+                            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input 
+                                type="text" 
+                                placeholder="이름으로 검색..."
+                                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="text-sm font-medium">
+                            {isSyncing ? (
+                                <span className="text-blue-600 flex items-center gap-2">
+                                    <i className="fa-solid fa-arrows-rotate animate-spin"></i> 동기화 중
+                                </span>
+                            ) : (
+                                <span className="text-green-600 flex items-center gap-2">
+                                    <i className="fa-solid fa-cloud"></i> 실시간 연결됨
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {error && (
+                        <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 flex items-start gap-3 border border-red-100">
+                            <i className="fa-solid fa-circle-exclamation mt-1"></i>
+                            <div>
+                                <p className="font-semibold">설정이 필요합니다</p>
+                                <p className="text-sm">Apps Script를 배포하고 SCRIPT_URL을 소스코드에 입력해주세요.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Dashboard Content */}
+                    <div className="space-y-8">
+                        {Object.keys(groupedData).sort().map(size => (
+                            <section key={size} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="bg-gray-50 px-6 py-3 border-b border-gray-100 flex justify-between items-center">
+                                    <h2 className="font-bold text-gray-700">{size}</h2>
+                                    <span className="text-xs bg-gray-200 px-2 py-1 rounded-full text-gray-600 font-bold">
+                                        {groupedData[size].length}명
                                     </span>
-                                    <input type="checkbox" 
-                                        class="checkbox-bounce w-7 h-7 rounded-xl border-2 border-gray-200 text-blue-600 focus:ring-0 cursor-pointer transition-all" 
-                                        ${m.received ? 'checked' : ''} 
-                                        onchange="toggleReceived(${m.row}, this, '${elId}')">
-                                </li>
-                            `}).join('')}
-                        </ul>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 divide-y md:divide-y-0 md:gap-px md:bg-gray-100">
+                                    {groupedData[size].map((person) => {
+                                        const isReceived = person["수령여부"] === true || person["수령여부"] === "TRUE" || person["수령여부"] === "checked";
+                                        return (
+                                            <div 
+                                                key={person.rowIndex} 
+                                                onClick={() => handleToggle(person.rowIndex, isReceived)}
+                                                className={`flex items-center justify-between p-4 bg-white cursor-pointer hover:bg-gray-50 transition-colors ${isReceived ? 'opacity-60' : ''}`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${isReceived ? 'bg-gray-100 text-gray-400' : 'bg-blue-100 text-blue-600'}`}>
+                                                        {person["이름"]?.substring(0, 1)}
+                                                    </div>
+                                                    <div>
+                                                        <p className={`font-semibold ${isReceived ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                                            {person["이름"]}
+                                                        </p>
+                                                        <p className="text-xs text-gray-400">{size}</p>
+                                                    </div>
+                                                </div>
+                                                <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${isReceived ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'}`}>
+                                                    {isReceived && <i className="fa-solid fa-check text-white text-xs"></i>}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </section>
+                        ))}
                     </div>
-                `;
-                container.appendChild(card);
-            });
+
+                    {Object.keys(groupedData).length === 0 && (
+                        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
+                            <i className="fa-solid fa-user-slash text-4xl text-gray-200 mb-4"></i>
+                            <p className="text-gray-400">검색 결과가 없습니다.</p>
+                        </div>
+                    )}
+                    
+                    <footer className="mt-12 text-center text-gray-400 text-sm">
+                        <p>© 2026 참마음클럽 단체티 배포 시스템</p>
+                        <p className="mt-1">체크 시 구글 스프레드시트 D열과 실시간 동기화됩니다.</p>
+                    </footer>
+                </div>
+            );
         }
 
-        function updateTimestamp() {
-            const now = new Date();
-            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
-                          now.getMinutes().toString().padStart(2, '0') + ':' + 
-                          now.getSeconds().toString().padStart(2, '0');
-            document.getElementById('last-update').innerText = `최근 동기화: ${timeStr}`;
-        }
-
-        function showToast(msg, type = "success") {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toast-msg');
-            toastMsg.innerText = msg;
-            
-            toast.style.opacity = '1';
-            toast.style.transform = 'translate(-50%, -20px)';
-            
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translate(-50%, 0)';
-            }, 2500);
-        }
-
-        // 초기 실행 및 30초 주기 자동 갱신
-        window.onload = () => {
-            fetchData();
-            setInterval(fetchData, 30000); 
-        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
