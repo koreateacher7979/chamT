@@ -58,15 +58,22 @@
 
             useEffect(() => {
                 fetchData();
-                // 30초마다 자동 새로고침 (실시간 동기화 느낌 유지)
                 const interval = setInterval(fetchData, 30000);
                 return () => clearInterval(interval);
             }, []);
 
+            // 수령여부 열이 비어있지 않은(체크박스가 있는) 유효 신청자만 필터링
+            const validApplicants = useMemo(() => {
+                return data.filter(item => {
+                    const status = item["수령여부"];
+                    // 체크박스가 없는 경우(공백) 제외
+                    return status !== "" && status !== null && status !== undefined;
+                });
+            }, [data]);
+
             const handleToggle = async (rowIndex, currentStatus) => {
                 const newStatus = !currentStatus;
                 
-                // UI 즉시 업데이트 (Optimistic Update)
                 const updatedData = data.map(item => 
                     item.rowIndex === rowIndex ? { ...item, "수령여부": newStatus } : item
                 );
@@ -76,30 +83,30 @@
                 try {
                     await fetch(SCRIPT_URL, {
                         method: "POST",
-                        mode: "no-cors", // Apps Script CORS 정책 대응
+                        mode: "no-cors",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ rowIndex, received: newStatus })
                     });
-                    // no-cors 모드에서는 응답을 읽을 수 없으므로 성공으로 간주하거나 
-                    // 일정 시간 후 다시 fetch하여 확인합니다.
                     setTimeout(fetchData, 1000);
                 } catch (err) {
                     console.error("업데이트 실패:", err);
                     alert("동기화 중 오류가 발생했습니다.");
-                    fetchData(); // 원복
+                    fetchData();
                 } finally {
                     setIsSyncing(false);
                 }
             };
 
             const stats = useMemo(() => {
-                const total = data.length;
-                const received = data.filter(item => item["수령여부"] === true || item["수령여부"] === "TRUE" || item["수령여부"] === "checked").length;
+                const total = validApplicants.length;
+                const received = validApplicants.filter(item => 
+                    item["수령여부"] === true || item["수령여부"] === "TRUE" || item["수령여부"] === "checked"
+                ).length;
                 return { total, received, remaining: total - received };
-            }, [data]);
+            }, [validApplicants]);
 
             const groupedData = useMemo(() => {
-                const filtered = data.filter(item => 
+                const filtered = validApplicants.filter(item => 
                     item["이름"]?.toString().toLowerCase().includes(searchTerm.toLowerCase())
                 );
                 
@@ -109,7 +116,7 @@
                     acc[size].push(item);
                     return acc;
                 }, {});
-            }, [data, searchTerm]);
+            }, [validApplicants, searchTerm]);
 
             if (loading && data.length === 0) {
                 return (
@@ -134,7 +141,7 @@
                     {/* Stats */}
                     <div className="grid grid-cols-3 gap-4 mb-8">
                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-center">
-                            <p className="text-xs text-gray-500 font-medium uppercase mb-1">총 수량</p>
+                            <p className="text-xs text-gray-500 font-medium uppercase mb-1">신청 인원</p>
                             <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
                         </div>
                         <div className="bg-blue-50 p-4 rounded-2xl shadow-sm border border-blue-100 text-center">
@@ -226,13 +233,13 @@
                     {Object.keys(groupedData).length === 0 && (
                         <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
                             <i className="fa-solid fa-user-slash text-4xl text-gray-200 mb-4"></i>
-                            <p className="text-gray-400">검색 결과가 없습니다.</p>
+                            <p className="text-gray-400">검색 결과가 없거나 신청 인원이 없습니다.</p>
                         </div>
                     )}
                     
                     <footer className="mt-12 text-center text-gray-400 text-sm">
                         <p>© 2026 참마음클럽 단체티 배포 시스템</p>
-                        <p className="mt-1">체크 시 구글 스프레드시트 D열과 실시간 동기화됩니다.</p>
+                        <p className="mt-1">수령여부 열에 체크박스가 있는 인원만 표시됩니다.</p>
                     </footer>
                 </div>
             );
